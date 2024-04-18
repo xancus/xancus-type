@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<title>Monkey type clone</title>
+<style>
+    :root {
+        color-scheme: dark;
+        --green: #00b755;
+        --yellow: #daaf38;
+        --red: #ca4754;
+        --black: #222;
+        --gray: #999;
+    }
+
+    body{
+        font-family: monospace;
+        background-color: var(--black);
+        font-size: 25px;
+        display: grid;
+        padding:32px;   
+    }
+    input {
+        position: absolute;
+    }
+
+    p {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .word {
+        position: relative;
+        display: flex;
+        flex-direction: row;
+
+        &.active::after {
+            content: '|';
+            color: var(--yellow);
+            position: absolute;
+            right: -9%;
+            animation: 1.3s blink infinite ease-in-out;
+        }
+    }
+
+    .letter {
+        color: var(--gray);
+        position: relative;
+
+        &.active::before {
+            content: '|';
+            color: var(--yellow);
+            position: absolute;
+            left: -53%;
+            animation: 1.3s blink infinite ease-in-out;
+
+        }
+        &.good {
+            color: var(--green);
+        }
+        &.bad {
+            color: var(--red);
+        }
+        &.miss {
+            text-decoration: underline;
+            text-decoration-color: var(--yellow);
+        }
+        &.activeSpace::before{
+            content: '|';
+            color: var(--yellow);
+            position: absolute;
+            left: -6px;
+            animation: 1.3s blink infinite ease-in-out;
+        }
+    }
+
+    @keyframes blink {
+        0%, 25% {
+            opacity: 0;
+        }
+        75% {
+            opacity: 0.8;
+        }
+        100% {
+            opacity: 1;
+        }
+    }
+    #game {
+        display: block;
+    }
+    #result {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        width: 200px;
+        margin: 0 auto;
+        gap: 5px;
+    }
+    #lost {
+        display: none;
+    }
+    h2{
+        color: var(--gray);
+        margin: 0;
+        padding: 0;
+        width: 100%;
+    }
+    h3 {
+        color: var(--yellow);
+        margin: 0;
+        padding: 0;
+        width: 100%;
+    }
+    .button {
+        margin-top: 10px;
+        background-color: #ffffff00;
+        color: #fff;
+        width: 8.5em;
+        height: 3.2em;
+        border: #3654ff 0.2em solid;
+        border-radius: 11px;
+        text-align: right;
+        transition: all 0.6s ease;
+        }
+
+        .button:hover {
+        background-color: #3654ff;
+        cursor: pointer;
+        }
+
+        .button svg {
+        width: 1.6em;
+        margin: -0.2em 0.8em 1em;
+        position: absolute;
+        display: flex;
+        transition: all 0.6s ease;
+        }
+
+        .button:hover svg {
+        transform: translateX(5px);
+        }
+
+        .text {
+        margin: 0 1.5em
+        }
+    
+</style>
+<body>
+    <main>
+        <section id="game">
+            <time></time>
+            <p></p>
+            <input autofocus>
+        </section>
+        <section id="result">
+            <h2>WPM</h2>
+            <h3></h3>
+            <h2>Accuracy</h2>
+            <h3></h3>
+            <button class="button" onclick="initGame()">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"></path>
+                </svg>
+                <div class="text">
+                  Start Game
+                </div>
+              </button>
+        </section>
+    </main>
+</body>
+</html>
+
+<script>
+    const INITIAL_TIME = 2
+    const TEXT = 'hi this is a random text of xancus trying to clone the monkeytype repo for fun and profit using vanilla js for the typing test speed'
+
+    const $time = document.querySelector('time')
+    const $p = document.querySelector('p')
+    const $input = document.querySelector('input')
+    const $result = document.querySelector('#result')
+    const $wpm = $result.querySelector('h3')
+    const $accuracy = $result.querySelectorAll('h3')[1]
+    const $game = document.querySelector('#game')
+
+    let currentTime = INITIAL_TIME
+    let writtenWords = []
+
+    initGame()
+    initEvents()
+
+    function initGame(){
+        $result.style.display = 'none'
+        $game.style.display = 'block'
+        currentTime = INITIAL_TIME
+        const text = TEXT.split(' ')
+        $time.textContent = currentTime
+
+        $p.innerHTML = text.map((word, index) => {
+            const letters = word.split('')
+            return `<span class="word">
+                ${letters
+                    .map(letter => `<span class="letter">${letter}</span>`)
+                    .join('')}
+            </span>`
+        }).join('')
+
+        const $firstWord = document.querySelector('.word')
+        const $firstLetter = document.querySelector('.letter')
+        $firstWord.classList.add('check')
+        $firstLetter.classList.add('active')
+
+        const intervalId = setInterval(() => {
+            currentTime--
+            $time.textContent = currentTime
+
+            if(currentTime === 0){
+                console.log('time is 0')
+                gameOver()
+                clearInterval(intervalId)
+            }
+        }, 1000)
+    }
+
+    function initEvents () {
+        $input.addEventListener('input', (ev) => {
+            const {value: userInput} = ev.target;
+            let currentUserInput = ev.data
+            let currentUserInputPos = userInput.length - 1
+
+            const $words = document.querySelectorAll('.word')
+            let $checkWord = document.querySelector('.check')
+            let $letters = $checkWord.children;
+            let $currentLetter = $letters[currentUserInputPos];
+            let $nextSiblingLetter;
+
+            if(ev.inputType == 'deleteContentBackward') {
+                const $prevCurrentLetter = $letters[currentUserInputPos + 1]
+                const $prevSiblingLetter = $prevCurrentLetter.nextElementSibling
+                if($prevSiblingLetter) {
+                    $prevSiblingLetter.classList.remove('active')
+                }else {
+                    $checkWord.classList.remove('active')
+                }
+                $prevCurrentLetter.classList.add('active');
+                $prevCurrentLetter.classList.remove('good', 'bad')
+                
+                return
+            }
+
+            if (currentUserInput === ' '){
+                currentUserInputPos = 0
+                $checkWord.classList.remove('check')
+                $checkWord.nextElementSibling.classList.add('check')
+                $currentLetter = $checkWord.nextElementSibling.children[currentUserInputPos]
+                $input.value = '';
+                $currentLetter.classList.add('active')
+                $checkWord.classList.remove('active')
+
+                if(userInput.trim() === $checkWord.textContent.trim()) {
+                    writtenWords.push(userInput.trim());
+
+                    //$input.value = '';
+                } else {
+                    console.log('entro al else despai');
+                    Array.from($letters, letter => {
+                        letter.classList.remove('active')
+                        if (!letter.classList.contains('good') && !letter.classList.contains('bad')) letter.classList.add('miss')
+                    })
+                    $checkWord.nextElementSibling.children[0].classList.add('active')
+                }
+                
+            }
+            else {
+                const currentLetterValue = $currentLetter.textContent;
+                $nextSiblingLetter = $currentLetter.nextElementSibling
+                const letterClass = currentLetterValue === currentUserInput ? 'good' : 'bad'
+                console.log($currentLetter, $checkWord);
+
+                if(currentLetterValue === currentUserInput) {
+                    $checkWord.classList.remove('active');
+                    $currentLetter.classList.add(letterClass);
+                    $currentLetter.classList.remove('active');
+
+                } else {
+                    $checkWord.classList.remove('active');
+                    $currentLetter.classList.add(letterClass);
+                    $currentLetter.classList.remove('active');
+                }
+
+                if($nextSiblingLetter) {
+                    $nextSiblingLetter.classList.add('active');
+                }else{
+                    $checkWord.classList.add('active')
+                }
+                
+            } 
+        })
+
+    }
+
+
+    function gameOver() {
+        
+        $game.style.display = 'none'
+        $result.style.display = 'flex'
+    
+        currentTime = 0
+        // $lost.style.display = 'block'
+
+        const correctLetter = document.querySelectorAll('.letter.good').length
+        const incorrectLetter = document.querySelectorAll('.letter.bad').length
+
+        const totalLetters = correctLetter + incorrectLetter
+        const accuracy = totalLetters > 0 ? (correctLetter/totalLetters) * 100 : 0
+        const wpm = totalLetters * 60 / INITIAL_TIME
+        $wpm.textContent = wpm
+        $accuracy.textContent = `${accuracy.toFixed(2)}%`
+        return
+    }
+
+</script>
